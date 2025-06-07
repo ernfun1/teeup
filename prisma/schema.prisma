@@ -1,0 +1,43 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Golfer model - represents a person who can sign up for tee times
+model Golfer {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastInitial String   @db.VarChar(1)
+  createdAt   DateTime @default(now())
+  signups     Signup[] // One golfer can have many signups
+  
+  // Ensure combination of firstName and lastInitial is unique
+  @@unique([firstName, lastInitial])
+  @@map("golfers") // Table name in database
+}
+
+// Signup model - represents a golfer signing up for a specific date
+model Signup {
+  id        String   @id @default(cuid())
+  golferId  String
+  date      DateTime @db.Date // Store only the date, not time
+  createdAt DateTime @default(now())
+  
+  // Relation to Golfer model
+  golfer    Golfer   @relation(fields: [golferId], references: [id], onDelete: Cascade)
+  
+  // Ensure a golfer can only sign up once per date
+  @@unique([golferId, date])
+  @@map("signups") // Table name in database
+}

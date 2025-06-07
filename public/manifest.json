@@ -1,0 +1,27 @@
+{
+  "name": "TeeUp - Golf Tee Time Booking",
+  "short_name": "TeeUp",
+  "description": "Coordinate golf tee times with your friends",
+  "theme_color": "#2D5016",
+  "background_color": "#F3F4F6",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "lifestyle"],
+  "lang": "en"
+} 
