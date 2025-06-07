@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 
@@ -9,8 +9,6 @@ export const metadata: Metadata = {
   description: 'Coordinate golf tee times with your friends. Simple, fast, and no sign-up required.',
   keywords: ['golf', 'tee time', 'booking', 'schedule', 'golfers'],
   authors: [{ name: 'TeeUp' }],
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
-  themeColor: '#2D5016',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -27,6 +25,13 @@ export const metadata: Metadata = {
     description: 'Coordinate golf tee times with your friends. Simple, fast, and no sign-up required.',
     type: 'website',
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#2D5016',
 }
 
 export default function RootLayout({
