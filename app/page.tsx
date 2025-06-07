@@ -2,20 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { PencilIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
+import GolferModal from '@/components/GolferModal'
 
 interface Golfer {
   id: string
   firstName: string
   lastInitial: string
-  mobileNumber?: string
+  mobileNumber?: string | null
 }
 
 export default function Home() {
   const [golfers, setGolfers] = useState<Golfer[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ firstName: '', lastInitial: '', mobileNumber: '' })
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedGolfer, setSelectedGolfer] = useState<Golfer | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   useEffect(() => {
     fetchGolfers()
@@ -35,40 +37,33 @@ export default function Home() {
     }
   }
 
-  const handleEdit = (golfer: Golfer) => {
-    setEditingId(golfer.id)
-    setEditForm({
-      firstName: golfer.firstName,
-      lastInitial: golfer.lastInitial,
-      mobileNumber: golfer.mobileNumber || ''
-    })
+  const handleAddGolfer = () => {
+    setSelectedGolfer(null)
+    setModalOpen(true)
   }
 
-  const handleSave = async () => {
-    if (!editingId) return
+  const handleEditGolfer = (golfer: Golfer) => {
+    setSelectedGolfer(golfer)
+    setModalOpen(true)
+  }
 
+  const handleDeleteGolfer = async (golferId: string) => {
     try {
-      const response = await fetch('/api/golfers', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingId,
-          ...editForm
-        })
+      const response = await fetch(`/api/golfers/${golferId}`, {
+        method: 'DELETE'
       })
-
+      
       if (response.ok) {
-        await fetchGolfers()
-        setEditingId(null)
+        fetchGolfers()
+        setDeleteConfirm(null)
       }
     } catch (error) {
-      console.error('Failed to update golfer:', error)
+      console.error('Failed to delete golfer:', error)
     }
   }
 
-  const handleCancel = () => {
-    setEditingId(null)
-    setEditForm({ firstName: '', lastInitial: '', mobileNumber: '' })
+  const handleModalSave = () => {
+    fetchGolfers()
   }
 
   return (
@@ -81,15 +76,26 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-green-700 flex items-center gap-2">
                 TeeUp <span>⛳</span>
               </h1>
-              <p className="text-sm text-gray-600 mt-1">Click your name to book tee times</p>
+              <p className="text-sm text-gray-600 mt-1">Click your name to select days to play</p>
             </div>
             
-            <Link
-              href="/calendar"
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-            >
-              This Week
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleAddGolfer}
+                disabled={golfers.length >= 50}
+                className="flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow"
+              >
+                <PlusIcon className="w-4 h-4" />
+                <span>Add Golfer</span>
+              </button>
+              
+              <Link
+                href="/calendar"
+                className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow"
+              >
+                This Week
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -102,53 +108,10 @@ export default function Home() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {golfers.map((golfer) => (
-                <div key={golfer.id} className="p-4 hover:bg-gray-50 transition-colors">
-                  {editingId === golfer.id ? (
-                    // Edit mode
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <input
-                          type="text"
-                          value={editForm.firstName}
-                          onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="First name"
-                        />
-                        <input
-                          type="text"
-                          value={editForm.lastInitial}
-                          onChange={(e) => setEditForm({ ...editForm, lastInitial: e.target.value.slice(0, 1) })}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="Initial"
-                          maxLength={1}
-                        />
-                        <input
-                          type="tel"
-                          value={editForm.mobileNumber}
-                          onChange={(e) => setEditForm({ ...editForm, mobileNumber: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="Mobile number"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleSave}
-                          className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={handleCancel}
-                          className="px-3 py-1 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    // Display mode
+            <>
+              <div className="divide-y divide-gray-200">
+                {golfers.map((golfer) => (
+                  <div key={golfer.id} className="p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between">
                       <Link
                         href={`/golfer/${golfer.id}/book`}
@@ -156,27 +119,74 @@ export default function Home() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-gray-900 hover:text-green-700 transition-colors">
                               {golfer.firstName} {golfer.lastInitial}
                             </h3>
                             <p className="text-sm text-gray-500">{golfer.mobileNumber || 'No number'}</p>
                           </div>
                         </div>
                       </Link>
-                      <button
-                        onClick={() => handleEdit(golfer)}
-                        className="ml-4 p-2 text-gray-400 hover:text-gray-600"
-                      >
-                        <PencilIcon className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handleEditGolfer(golfer)
+                          }}
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit golfer"
+                        >
+                          <PencilIcon className="w-5 h-5" />
+                        </button>
+                        {deleteConfirm === golfer.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleDeleteGolfer(golfer.id)}
+                              className="text-red-600 hover:text-red-700 text-sm px-2 py-1"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(null)}
+                              className="text-gray-600 hover:text-gray-700 text-sm px-2 py-1"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirm(golfer.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                            title="Delete golfer"
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Stats */}
+              <div className="p-4 bg-gray-50 border-t">
+                <p className="text-sm text-gray-600">
+                  Total golfers: <span className="font-semibold">{golfers.length}</span> / 50
+                  <span className="mx-2">•</span>
+                  Available slots: <span className="font-semibold">{50 - golfers.length}</span>
+                </p>
+              </div>
+            </>
           )}
         </div>
       </div>
+
+      {/* Modal */}
+      <GolferModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleModalSave}
+        golfer={selectedGolfer}
+      />
     </main>
   )
 }

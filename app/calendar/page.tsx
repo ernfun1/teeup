@@ -34,9 +34,9 @@ export default function CalendarPage() {
             
             <Link
               href="/"
-              className="text-gray-600 hover:text-gray-900"
+              className="bg-gray-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow"
             >
-              ← Back to Golfers
+              Back to Golfers
             </Link>
           </div>
         </div>

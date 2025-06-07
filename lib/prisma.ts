@@ -8,10 +8,15 @@ import { PrismaClient } from '@prisma/client'
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
+// Fix for prepared statement error with pgbouncer
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: ['query'], // Remove this in production for better performance
+    log: process.env.NODE_ENV === 'development' 
+      ? ['error', 'warn'] as const
+      : ['error'] as const,
   })
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma 
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma
+} 

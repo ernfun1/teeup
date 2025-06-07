@@ -40,39 +40,52 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/golfers - Not used in new flow
+// POST /api/golfers - Create a new golfer
 export async function POST(request: NextRequest) {
-  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 })
-}
-
-// PUT /api/golfers/[id] - Update a golfer
-export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, firstName, lastInitial, mobileNumber } = body
+    const { firstName, lastInitial, mobileNumber } = body
     
-    if (!id) {
+    // Validate required fields
+    if (!firstName || !lastInitial) {
       return NextResponse.json(
-        { error: 'Golfer ID is required' },
+        { error: 'First name and last initial are required' },
         { status: 400 }
       )
     }
     
-    // Update the golfer
-    const golfer = await prisma.golfer.update({
-      where: { id },
+    // Check if we've reached the limit of 50 golfers
+    const golferCount = await prisma.golfer.count()
+    if (golferCount >= 50) {
+      return NextResponse.json(
+        { error: 'Maximum number of golfers (50) has been reached' },
+        { status: 400 }
+      )
+    }
+    
+    // Create the golfer
+    const golfer = await prisma.golfer.create({
       data: {
-        firstName: firstName || undefined,
-        lastInitial: lastInitial?.toUpperCase() || undefined,
-        mobileNumber: mobileNumber || undefined
+        firstName,
+        lastInitial: lastInitial.toUpperCase(),
+        mobileNumber: mobileNumber || null
       }
     })
     
     return NextResponse.json(golfer)
-  } catch (error) {
-    console.error('Error updating golfer:', error)
+  } catch (error: any) {
+    console.error('Error creating golfer:', error)
+    
+    // Handle unique constraint violation
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'A golfer with this name already exists' },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to update golfer' },
+      { error: 'Failed to create golfer' },
       { status: 500 }
     )
   }

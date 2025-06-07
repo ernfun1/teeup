@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import { getCalendarDates, formatDateDisplay, isDateSelectable, getWeekLabel } from '@/lib/utils'
 import { format } from 'date-fns'
 
@@ -19,6 +19,43 @@ interface Signup {
   date: string
 }
 
+interface PendingChange {
+  date: string
+  action: 'add' | 'remove'
+  signupId?: string
+}
+
+// Custom debounce hook
+function useDebounce<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+): T {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+  
+  const debouncedCallback = useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+      
+      timeoutRef.current = setTimeout(() => {
+        callback(...args)
+      }, delay)
+    },
+    [callback, delay]
+  ) as T
+  
+  return debouncedCallback
+}
+
 export default function BookingPage() {
   const params = useParams()
   const router = useRouter()
@@ -29,19 +66,55 @@ export default function BookingPage() {
   const [mySignups, setMySignups] = useState<Set<string>>(new Set())
   const [currentWeek, setCurrentWeek] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
+  const [isOnline, setIsOnline] = useState(true)
   
   const weeks = getCalendarDates()
   const week = weeks[currentWeek]
+  
+  // Monitor online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+  
+  // Load offline changes on mount
+  useEffect(() => {
+    const offlineChanges = localStorage.getItem(`teeup-offline-${golferId}`)
+    if (offlineChanges && isOnline) {
+      const changes = JSON.parse(offlineChanges)
+      setPendingChanges(changes)
+      localStorage.removeItem(`teeup-offline-${golferId}`)
+    }
+  }, [golferId, isOnline])
   
   useEffect(() => {
     fetchGolferAndSignups()
   }, [golferId])
   
+  // Hide save status after a delay
+  useEffect(() => {
+    if (saveStatus === 'saved' || saveStatus === 'error') {
+      const timer = setTimeout(() => {
+        setSaveStatus('idle')
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [saveStatus])
+  
   const fetchGolferAndSignups = async () => {
     try {
-      // Fetch golfer info
-      const golferResponse = await fetch(`/api/golfers?firstName=dummy&lastInitial=dummy`)
+      // Fetch all golfers and find the current one
+      const golferResponse = await fetch('/api/golfers')
       if (golferResponse.ok) {
         const golfers = await golferResponse.json()
         const currentGolfer = golfers.find((g: Golfer) => g.id === golferId)
@@ -71,52 +144,100 @@ export default function BookingPage() {
     }
   }
   
+  // Batch save function
+  const processBatchChanges = useCallback(async (changes: PendingChange[]) => {
+    if (changes.length === 0) return
+    
+    setSaveStatus('saving')
+    
+    try {
+      // Process changes in parallel for better performance
+      const promises = changes.map(async (change) => {
+        if (change.action === 'add') {
+          const response = await fetch('/api/signups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ golferId, date: change.date })
+          })
+          if (!response.ok) throw new Error('Failed to add signup')
+        } else {
+          if (change.signupId) {
+            const response = await fetch(`/api/signups?id=${change.signupId}`, { 
+              method: 'DELETE' 
+            })
+            if (!response.ok) throw new Error('Failed to remove signup')
+          }
+        }
+      })
+      
+      await Promise.all(promises)
+      
+      // Clear pending changes on success
+      setPendingChanges([])
+      
+      // Refresh data to get updated signup counts
+      await fetchGolferAndSignups()
+      setSaveStatus('saved')
+    } catch (error) {
+      console.error('Failed to save changes:', error)
+      setSaveStatus('error')
+      
+      // Save to localStorage for offline retry
+      if (!isOnline) {
+        const existingOffline = localStorage.getItem(`teeup-offline-${golferId}`)
+        const offlineChanges = existingOffline ? JSON.parse(existingOffline) : []
+        localStorage.setItem(
+          `teeup-offline-${golferId}`,
+          JSON.stringify([...offlineChanges, ...changes])
+        )
+      }
+      
+      // Revert optimistic updates on error
+      changes.forEach(change => {
+        const newSignups = new Set(mySignups)
+        if (change.action === 'add') {
+          newSignups.delete(change.date)
+        } else {
+          newSignups.add(change.date)
+        }
+        setMySignups(newSignups)
+      })
+    }
+  }, [golferId, isOnline, mySignups])
+  
+  // Debounced save function
+  const debouncedSave = useDebounce(processBatchChanges, 500)
+  
+  // Process pending changes when they update
+  useEffect(() => {
+    if (pendingChanges.length > 0 && isOnline) {
+      debouncedSave(pendingChanges)
+    }
+  }, [pendingChanges, debouncedSave, isOnline])
+  
   const toggleDate = (date: Date) => {
     const dateString = date.toISOString().split('T')[0]
-    const newSignups = new Set(mySignups)
+    const wasSelected = mySignups.has(dateString)
     
-    if (newSignups.has(dateString)) {
+    // Optimistically update UI immediately
+    const newSignups = new Set(mySignups)
+    if (wasSelected) {
       newSignups.delete(dateString)
     } else {
       newSignups.add(dateString)
     }
-    
     setMySignups(newSignups)
-  }
-  
-  const saveChanges = async () => {
-    setSaving(true)
     
-    try {
-      // Get current signups for this golfer
-      const currentSignups = signups.filter(s => s.golferId === golferId)
-      const currentDates = new Set(currentSignups.map(s => s.date))
-      
-      // Find dates to add and remove
-      const datesToAdd = Array.from(mySignups).filter(date => !currentDates.has(date))
-      const datesToRemove = currentSignups.filter(s => !mySignups.has(s.date))
-      
-      // Add new signups
-      for (const date of datesToAdd) {
-        await fetch('/api/signups', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ golferId, date })
-        })
-      }
-      
-      // Remove old signups
-      for (const signup of datesToRemove) {
-        await fetch(`/api/signups?id=${signup.id}`, { method: 'DELETE' })
-      }
-      
-      // Refresh data
-      await fetchGolferAndSignups()
-    } catch (error) {
-      console.error('Failed to save changes:', error)
-    } finally {
-      setSaving(false)
-    }
+    // Add to pending changes
+    const signupToRemove = signups.find(
+      s => s.golferId === golferId && s.date === dateString
+    )
+    
+    setPendingChanges(prev => [...prev, {
+      date: dateString,
+      action: wasSelected ? 'remove' : 'add',
+      signupId: signupToRemove?.id
+    }])
   }
   
   const getSignupsForDate = (date: Date) => {
@@ -155,22 +276,22 @@ export default function BookingPage() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                Book Tee Times for {golfer.firstName} {golfer.lastInitial}
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                Book Tee Times for {golfer.firstName} {golfer.lastInitial} <span>⛳</span>
               </h1>
               <p className="text-sm text-gray-600">Select the days you want to play</p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="text-gray-600 hover:text-gray-900"
+                className="bg-gray-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow"
               >
                 Back
               </Link>
               <Link
                 href="/calendar"
-                className="bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300"
+                className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow"
               >
                 This Week
               </Link>
@@ -178,6 +299,43 @@ export default function BookingPage() {
           </div>
         </div>
       </header>
+      
+      {/* Save Status Indicator */}
+      {(saveStatus !== 'idle' || !isOnline) && (
+        <div className="fixed top-20 right-4 z-20 animate-fade-in">
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg ${
+            !isOnline ? 'bg-yellow-600 text-white' :
+            saveStatus === 'saving' ? 'bg-gray-800 text-white' :
+            saveStatus === 'saved' ? 'bg-green-600 text-white' :
+            'bg-red-600 text-white'
+          }`}>
+            {!isOnline && (
+              <>
+                <ExclamationCircleIcon className="w-5 h-5" />
+                <span className="text-sm font-medium">Offline - changes will sync</span>
+              </>
+            )}
+            {isOnline && saveStatus === 'saving' && (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <span className="text-sm font-medium">Saving...</span>
+              </>
+            )}
+            {isOnline && saveStatus === 'saved' && (
+              <>
+                <CheckCircleIcon className="w-5 h-5" />
+                <span className="text-sm font-medium">Saved</span>
+              </>
+            )}
+            {isOnline && saveStatus === 'error' && (
+              <>
+                <ExclamationCircleIcon className="w-5 h-5" />
+                <span className="text-sm font-medium">Failed to save</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* Week Navigation */}
       <div className="bg-white border-b">
@@ -254,16 +412,13 @@ export default function BookingPage() {
           })}
         </div>
         
-        {/* Save Button */}
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={saveChanges}
-            disabled={saving}
-            className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+        {/* Helpful message */}
+        <p className="text-center text-sm text-gray-500 mt-4">
+          Changes are saved automatically
+          {pendingChanges.length > 0 && (
+            <span className="text-gray-400"> • {pendingChanges.length} pending</span>
+          )}
+        </p>
       </div>
     </main>
   )
