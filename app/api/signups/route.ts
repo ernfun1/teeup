@@ -5,8 +5,8 @@ import { startOfWeek, endOfWeek, addWeeks } from 'date-fns'
 // GET /api/signups - Get signups for the 4-week period
 export async function GET(request: NextRequest) {
   try {
-    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 })
-    const fourWeeksEnd = endOfWeek(addWeeks(currentWeekStart, 3), { weekStartsOn: 0 })
+    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday
+    const fourWeeksEnd = endOfWeek(addWeeks(currentWeekStart, 3), { weekStartsOn: 1 })
     
     const signups = await prisma.signup.findMany({
       where: {
