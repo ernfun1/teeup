@@ -1,164 +1,150 @@
-# TeeUp - Golf Tee Time Booking App ⛳
+# TeeUp - Smart Golf Tee Time Booking App ⛳
 
-A simple, mobile-first web application for coordinating golf tee times with friends. No authentication required - just enter your name and start booking!
+> **Last Updated**: June 7, 2025  
+> A modern, intelligent web application for coordinating golf tee times with your group. Features real-time auto-save, offline support, and a beautiful mobile-first design.
 
-## Features
+## 🚀 What's New (June 2025)
 
+- **Real-time Auto-Save**: Changes save automatically as you select dates - no more lost bookings!
+- **Offline Support**: Works without internet and syncs when reconnected
+- **Golfer Management**: Add, edit, and delete golfers directly from the home page
+- **Performance Optimized**: Debounced updates and batched API calls for lightning-fast performance on Vercel
+- **Improved UI**: Consistent, modern button styling throughout the app
+- **Smart Sync**: Intelligent conflict resolution when multiple users book simultaneously
+
+## ✨ Features
+
+### Core Functionality
 - 📅 **4-Week Calendar View** - See current week plus next 3 weeks
 - 👥 **Up to 8 Golfers per Day** - First come, first served
+- 🏌️ **50 Golfer Roster** - Manage up to 50 unique golfers
 - 📱 **Mobile-First Design** - Swipe between weeks, tap to book
-- 💾 **Offline Support** - Works without internet, syncs when connected
-- 🚀 **Real-time Updates** - See when others sign up instantly
-- 🔐 **No Login Required** - Just use your first name and last initial
+- ⚡ **Real-time Auto-Save** - No save button needed - changes persist instantly
+- 🔄 **Offline Mode** - Continue booking even without internet
+- 👤 **Easy Golfer Management** - Add, edit, or remove golfers with one click
 
-## Tech Stack
+### User Experience
+- **No Login Required** - Simple name-based system
+- **Instant Feedback** - See save status indicators as you make changes
+- **Smart Debouncing** - Multiple quick selections are batched together
+- **Conflict Prevention** - Real-time updates prevent double-booking
+- **Beautiful Animations** - Smooth transitions and feedback
 
-- **Frontend**: Next.js 14+, React 18+, TypeScript
-- **Styling**: Tailwind CSS
-- **Database**: PostgreSQL with Prisma ORM
-- **State Management**: Zustand with persistence
-- **PWA**: Progressive Web App with offline support
+## 🛠 Tech Stack
 
-## Getting Started
+- **Frontend**: Next.js 15.3, React 18+, TypeScript
+- **Styling**: Tailwind CSS v4 with custom animations
+- **Database**: PostgreSQL (Supabase) with Prisma ORM
+- **Deployment**: Optimized for Vercel with Edge Functions
+- **State Management**: React hooks with optimistic updates
+- **Performance**: Debounced updates, request batching, offline queue
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ installed
-- PostgreSQL database (local or cloud)
+- Node.js 18+ and npm
+- Supabase account (free tier works great)
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone and install**
    ```bash
+   git clone https://github.com/yourusername/teeup.git
    cd teeup
-   ```
-
-2. **Install dependencies**
-   ```bash
    npm install
    ```
 
-3. **Set up your database**
-   
-   Create a `.env` file in the root directory:
+2. **Set up Supabase**
+   - Create a project at [supabase.com](https://supabase.com)
+   - Get your database URL from Settings → Database
+
+3. **Configure environment**
+   Create `.env` file:
    ```env
-   DATABASE_URL="postgresql://username:password@localhost:5432/teeup?schema=public"
+   DATABASE_URL="postgresql://...supabase.com:6543/postgres?pgbouncer=true"
+   DIRECT_URL="postgresql://...supabase.com:5432/postgres"
    ```
    
-   Replace with your actual database credentials. You can use:
-   - Local PostgreSQL installation
-   - [Supabase](https://supabase.com) (free tier available)
-   - [Vercel Postgres](https://vercel.com/postgres)
-   - [Neon](https://neon.tech) (free tier available)
+   ⚠️ **Important**: Add `?pgbouncer=true` to your DATABASE_URL!
 
-4. **Run database migrations**
+4. **Initialize database**
    ```bash
    npx prisma generate
-   npx prisma migrate dev
+   npx prisma migrate deploy
    ```
 
-5. **Seed the database (optional)**
-   ```bash
-   npx prisma db seed
-   ```
-
-6. **Start the development server**
+5. **Start development server**
    ```bash
    npm run dev
    ```
 
-7. **Open the app**
-   Visit [http://localhost:3000](http://localhost:3000)
+6. **Add initial golfers** (optional)
+   ```bash
+   npx tsx scripts/add-golfers.ts
+   ```
 
-## Database Setup Options
+## 📱 Usage Guide
 
-### Option 1: Local PostgreSQL
+### For Golfers
+1. **Find yourself** in the golfer list or add yourself with the "Add Golfer" button
+2. **Click your name** to select days you want to play
+3. **Check/uncheck days** - changes save automatically
+4. **View calendar** with "This Week" button to see who's playing when
 
-1. Install PostgreSQL on your machine
-2. Create a new database: `createdb teeup`
-3. Use the connection string format above
+### For Administrators
+1. **Add golfers**: Click "Add Golfer" and enter their details
+2. **Edit golfers**: Click the pencil icon next to any name
+3. **Remove golfers**: Click the trash icon (with confirmation)
+4. **Monitor capacity**: See "X/50 golfers" at the bottom
 
-### Option 2: Supabase (Recommended for beginners)
-
-1. Create a free account at [supabase.com](https://supabase.com)
-2. Create a new project
-3. Go to Settings → Database
-4. Copy the connection string (use the "Direct connection" one)
-5. Replace `[YOUR-PASSWORD]` with your database password
-
-### Option 3: Vercel Postgres
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. Run `vercel link` to connect your project
-3. Run `vercel env pull` to get environment variables
-4. The DATABASE_URL will be automatically added
-
-## Deployment
+## 🌐 Deployment
 
 ### Deploy to Vercel (Recommended)
 
-1. Push your code to GitHub
-2. Import your project on [Vercel](https://vercel.com)
-3. Add your `DATABASE_URL` environment variable
-4. Deploy!
-
-### Manual Deployment
-
-1. Build the project:
+1. **Push to GitHub**
    ```bash
-   npm run build
+   git remote add origin your-repo-url
+   git push -u origin main
    ```
 
-2. Start the production server:
-   ```bash
-   npm start
-   ```
+2. **Import to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository
+   - Add environment variables:
+     - `DATABASE_URL` (with `?pgbouncer=true`)
+     - `DIRECT_URL` (optional but recommended)
 
-## Usage
+3. **Deploy!** 
+   - Vercel will build and deploy automatically
+   - Get your URL: `https://your-app.vercel.app`
 
-1. **First Visit**: Enter your first name and last initial (e.g., "John S")
-2. **Book Tee Times**: Tap any available day to sign up
-3. **Cancel Booking**: Tap a day you're signed up for to cancel
-4. **Navigate Weeks**: Swipe left/right or use arrow buttons
-5. **View Participants**: See who else is signed up for each day
+### Database Configuration
 
-## Troubleshooting
+For Supabase users, ensure your connection string includes:
+```
+?pgbouncer=true
+```
 
-### Common Issues
+This prevents "prepared statement already exists" errors.
 
-1. **"Cannot connect to database"**
-   - Check your DATABASE_URL in .env
-   - Ensure PostgreSQL is running
-   - Verify your credentials
+## 🔧 Development
 
-2. **"Prisma Client not generated"**
-   - Run `npx prisma generate`
-
-3. **"Maximum golfers reached"**
-   - The app allows up to 50 unique golfers total
-   - Each day is limited to 8 golfers maximum
-   - Use an existing name/initial combination if limit is reached
-
-4. **Offline mode not working**
-   - Ensure you've visited the site once while online
-   - Check if service workers are enabled in your browser
-
-## Development
-
-### Useful Commands
+### Key Commands
 
 ```bash
-# Generate Prisma client after schema changes
-npx prisma generate
+# Development
+npm run dev              # Start dev server
+npm run build           # Build for production
+npm start              # Start production server
 
-# Create a new migration
-npx prisma migrate dev --name your_migration_name
+# Database
+npx prisma studio      # Visual database editor
+npx prisma generate    # Regenerate Prisma client
+npx prisma migrate dev # Create new migration
 
-# Open Prisma Studio to view/edit data
-npx prisma studio
-
-# Reset database (WARNING: deletes all data)
-npx prisma migrate reset
+# Testing
+npx tsx scripts/add-golfers.ts  # Add sample golfers
 ```
 
 ### Project Structure
@@ -167,32 +153,80 @@ npx prisma migrate reset
 teeup/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
-│   ├── page.tsx          # Main page
-│   └── layout.tsx        # Root layout
-├── components/            # React components
-│   ├── Calendar.tsx      # Main calendar view
-│   ├── DayCard.tsx       # Individual day component
-│   ├── GolferBadge.tsx   # Name display component
-│   └── NameInput.tsx     # User identification form
-├── lib/                   # Utilities and helpers
-│   ├── prisma.ts         # Prisma client singleton
-│   ├── store.ts          # Zustand store
-│   └── utils.ts          # Helper functions
-├── prisma/               # Database files
-│   ├── schema.prisma     # Database schema
-│   └── seed.ts          # Seed data
-└── public/               # Static files
-    └── manifest.json     # PWA manifest
+│   │   ├── golfers/      # Golfer CRUD endpoints
+│   │   └── signups/      # Booking endpoints
+│   ├── golfer/[id]/book/ # Individual booking page
+│   ├── calendar/         # Weekly calendar view
+│   └── page.tsx         # Home page with golfer list
+├── components/           # React components
+│   └── GolferModal.tsx  # Add/Edit golfer modal
+├── lib/                 # Utilities
+│   ├── prisma.ts       # Database client
+│   └── utils.ts        # Date helpers
+└── scripts/            # Utility scripts
+    └── add-golfers.ts  # Sample data script
 ```
 
-## Contributing
+### Performance Optimizations
 
-Feel free to open issues or submit pull requests!
+1. **Debounced Saves**: 500ms delay groups rapid changes
+2. **Batch Processing**: Multiple selections save together
+3. **Optimistic UI**: Instant feedback, rollback on error
+4. **Offline Queue**: Changes saved locally until online
+5. **Connection Pooling**: pgbouncer for Supabase efficiency
 
-## License
+## 🐛 Troubleshooting
 
-MIT License - feel free to use this for your own golf group!
+### Common Issues
+
+**"Prepared statement already exists"**
+- Ensure `?pgbouncer=true` is in your DATABASE_URL
+- Restart your development server
+
+**"Cannot add golfer"**
+- Check if you've reached the 50 golfer limit
+- Verify database connection
+
+**"Changes not saving"**
+- Check browser console for errors
+- Ensure you're online (or wait for reconnection)
+- Hard refresh (Cmd/Ctrl + Shift + R)
+
+**"Offline mode not working"**
+- Visit the site once while online first
+- Check if localStorage is enabled
+
+## 📈 Future Enhancements
+
+- [ ] Email notifications for weekly lineups
+- [ ] Handicap tracking
+- [ ] Tee time preferences
+- [ ] Group chat integration
+- [ ] Weather integration
+- [ ] Course selection
+
+## 🤝 Contributing
+
+We welcome contributions! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## 📄 License
+
+MIT License - Use freely for your golf group!
+
+## 🙏 Acknowledgments
+
+- Built with Next.js and Vercel
+- Database by Supabase
+- Icons by Heroicons
+- Inspired by golfers who just want to know who's playing
 
 ---
 
-Made with ❤️ for golfers who just want to play
+**Made with ❤️ and ⛳ by golfers, for golfers**
+
+*Questions? Issues? Create a GitHub issue or reach out!*
