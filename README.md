@@ -135,8 +135,9 @@ A simple, mobile-first web application for coordinating golf tee times with frie
    - Run `npx prisma generate`
 
 3. **"Maximum golfers reached"**
-   - The app limits to 8 unique golfers total
-   - Use an existing name/initial combination
+   - The app allows up to 50 unique golfers total
+   - Each day is limited to 8 golfers maximum
+   - Use an existing name/initial combination if limit is reached
 
 4. **Offline mode not working**
    - Ensure you've visited the site once while online

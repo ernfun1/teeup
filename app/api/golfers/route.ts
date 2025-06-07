@@ -70,40 +70,33 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check if we've reached the 8 golfer limit
-    const golferCount = await prisma.golfer.count()
-    if (golferCount >= 8) {
-      // Check if this golfer already exists
-      const existingGolfer = await prisma.golfer.findUnique({
-        where: {
-          firstName_lastInitial: {
-            firstName,
-            lastInitial: lastInitial.toUpperCase()
-          }
-        }
-      })
-      
-      if (!existingGolfer) {
-        return NextResponse.json(
-          { error: 'Maximum of 8 golfers reached' },
-          { status: 400 }
-        )
-      }
-      
-      // Return existing golfer
-      return NextResponse.json(existingGolfer)
-    }
-    
-    // Try to create or find the golfer
-    const golfer = await prisma.golfer.upsert({
+    // First, check if this golfer already exists
+    const existingGolfer = await prisma.golfer.findUnique({
       where: {
         firstName_lastInitial: {
           firstName,
           lastInitial: lastInitial.toUpperCase()
         }
-      },
-      update: {}, // Don't update anything if exists
-      create: {
+      }
+    })
+    
+    // If golfer exists, return them (allows login)
+    if (existingGolfer) {
+      return NextResponse.json(existingGolfer)
+    }
+    
+    // If golfer doesn't exist, check if we've reached the limit
+    const golferCount = await prisma.golfer.count()
+    if (golferCount >= 50) {
+      return NextResponse.json(
+        { error: 'Maximum golfer limit reached. Please use an existing name.' },
+        { status: 400 }
+      )
+    }
+    
+    // Create new golfer
+    const golfer = await prisma.golfer.create({
+      data: {
         firstName,
         lastInitial: lastInitial.toUpperCase()
       }
