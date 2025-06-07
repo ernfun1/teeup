@@ -1,0 +1,13 @@
+Vercel CLI 42.3.0
+Retrieving project…
+Deploying ef-ai-studio/teeup
+Uploading [--------------------] (0.0B/11.2KB)
+Uploading [===============-----] (8.9KB/11.2KB)
+Uploading [================----] (9.3KB/11.2KB)
+Uploading [====================] (11.2KB/11.2KB)
+Inspect: https://vercel.com/ef-ai-studio/teeup/E4uH2XyYC3H59cdpeb5iotAyZv8c [1s]
+Production: https://teeup-8dvt2g96y-ef-ai-studio.vercel.app [1s]
+https://teeup-8dvt2g96y-ef-ai-studio.vercel.appQueued
+Building
+Error: Command "npm install && npx prisma generate && npm run build" exited with 1
+Error: Check your logs at https://teeup-8dvt2g96y-ef-ai-studio.vercel.app/_logs or run `vercel logs teeup-8dvt2g96y-ef-ai-studio.vercel.app`
