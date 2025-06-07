@@ -4,15 +4,16 @@ import { prisma } from '@/lib/prisma'
 // PUT /api/golfers/[id] - Update a golfer
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const { firstName, lastInitial, mobileNumber } = body
     
     // Update the golfer
     const golfer = await prisma.golfer.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         firstName: firstName || undefined,
         lastInitial: lastInitial?.toUpperCase() || undefined,
@@ -48,11 +49,12 @@ export async function PUT(
 // DELETE /api/golfers/[id] - Delete a golfer
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     await prisma.golfer.delete({
-      where: { id: params.id }
+      where: { id }
     })
     
     return NextResponse.json({ success: true })
