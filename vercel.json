@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd teeup && npm install && npx prisma generate && npm run build",
+  "outputDirectory": "teeup/.next",
+  "installCommand": "cd teeup && npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NODE_ENV": "production"
+  }
+} 
