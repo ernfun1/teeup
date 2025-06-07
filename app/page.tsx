@@ -1,102 +1,182 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar } from '@/components/Calendar'
-import { NameInput } from '@/components/NameInput'
-import { useTeeUpStore } from '@/lib/store'
+import Link from 'next/link'
+import { PencilIcon } from '@heroicons/react/24/outline'
+
+interface Golfer {
+  id: string
+  firstName: string
+  lastInitial: string
+  mobileNumber?: string
+}
 
 export default function Home() {
-  const [isClient, setIsClient] = useState(false)
-  const currentGolfer = useTeeUpStore((state) => state.currentGolfer)
-  const setCurrentGolfer = useTeeUpStore((state) => state.setCurrentGolfer)
-  
-  // Ensure we're on the client side to avoid hydration issues
+  const [golfers, setGolfers] = useState<Golfer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ firstName: '', lastInitial: '', mobileNumber: '' })
+
   useEffect(() => {
-    setIsClient(true)
+    fetchGolfers()
   }, [])
-  
-  // Don't render until client-side to avoid hydration mismatch
-  if (!isClient) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-      </div>
-    )
-  }
-  
-  const handleLogout = () => {
-    if (confirm('Are you sure you want to log out?')) {
-      setCurrentGolfer(null)
+
+  const fetchGolfers = async () => {
+    try {
+      const response = await fetch('/api/golfers')
+      if (response.ok) {
+        const data = await response.json()
+        setGolfers(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch golfers:', error)
+    } finally {
+      setLoading(false)
     }
   }
-  
+
+  const handleEdit = (golfer: Golfer) => {
+    setEditingId(golfer.id)
+    setEditForm({
+      firstName: golfer.firstName,
+      lastInitial: golfer.lastInitial,
+      mobileNumber: golfer.mobileNumber || ''
+    })
+  }
+
+  const handleSave = async () => {
+    if (!editingId) return
+
+    try {
+      const response = await fetch('/api/golfers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingId,
+          ...editForm
+        })
+      })
+
+      if (response.ok) {
+        await fetchGolfers()
+        setEditingId(null)
+      }
+    } catch (error) {
+      console.error('Failed to update golfer:', error)
+    }
+  }
+
+  const handleCancel = () => {
+    setEditingId(null)
+    setEditForm({ firstName: '', lastInitial: '', mobileNumber: '' })
+  }
+
   return (
     <main className="min-h-screen bg-gray-50">
-      {!currentGolfer ? (
-        <div className="min-h-screen flex items-center justify-center">
-          <NameInput onComplete={() => {}} />
-        </div>
-      ) : (
-        <div className="pb-20">
-          {/* Header */}
-          <header className="bg-white shadow-sm border-b border-gray-200">
-            <div className="max-w-6xl mx-auto px-4 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-green-700">TeeUp</h1>
-                  <span className="text-2xl">⛳</span>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Signed in as</p>
-                    <p className="font-medium text-gray-900">
-                      {currentGolfer.firstName} {currentGolfer.lastInitial}
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={handleLogout}
-                    className="text-sm text-gray-500 hover:text-gray-700"
-                  >
-                    Log out
-                  </button>
-                </div>
-              </div>
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-green-700 flex items-center gap-2">
+                TeeUp <span>⛳</span>
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">Click your name to book tee times</p>
             </div>
-          </header>
-          
-          {/* Main content */}
-          <div className="py-6">
-            <Calendar />
-          </div>
-          
-          {/* Instructions */}
-          <div className="max-w-6xl mx-auto px-4 mt-8">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">How to use TeeUp</h2>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start">
-                  <span className="text-green-600 mr-2">•</span>
-                  Tap any available day to sign up for a tee time
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-600 mr-2">•</span>
-                  Tap again to remove your signup
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-600 mr-2">•</span>
-                  Swipe or use arrows to navigate between weeks
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-600 mr-2">•</span>
-                  Maximum 8 golfers per day
-                </li>
-              </ul>
-            </div>
+            
+            <Link
+              href="/calendar"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+            >
+              This Week
+            </Link>
           </div>
         </div>
-      )}
+      </header>
+
+      {/* Golfers List */}
+      <div className="max-w-4xl mx-auto p-4">
+        <div className="bg-white rounded-lg shadow-sm">
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {golfers.map((golfer) => (
+                <div key={golfer.id} className="p-4 hover:bg-gray-50 transition-colors">
+                  {editingId === golfer.id ? (
+                    // Edit mode
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <input
+                          type="text"
+                          value={editForm.firstName}
+                          onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="First name"
+                        />
+                        <input
+                          type="text"
+                          value={editForm.lastInitial}
+                          onChange={(e) => setEditForm({ ...editForm, lastInitial: e.target.value.slice(0, 1) })}
+                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="Initial"
+                          maxLength={1}
+                        />
+                        <input
+                          type="tel"
+                          value={editForm.mobileNumber}
+                          onChange={(e) => setEditForm({ ...editForm, mobileNumber: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="Mobile number"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSave}
+                          className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="px-3 py-1 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Display mode
+                    <div className="flex items-center justify-between">
+                      <Link
+                        href={`/golfer/${golfer.id}/book`}
+                        className="flex-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {golfer.firstName} {golfer.lastInitial}
+                            </h3>
+                            <p className="text-sm text-gray-500">{golfer.mobileNumber || 'No number'}</p>
+                          </div>
+                        </div>
+                      </Link>
+                      <button
+                        onClick={() => handleEdit(golfer)}
+                        className="ml-4 p-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <PencilIcon className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   )
 }

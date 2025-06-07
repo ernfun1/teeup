@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { DayCard } from './DayCard'
 import { getCalendarDates, getWeekLabel } from '@/lib/utils'
 import { useTeeUpStore } from '@/lib/store'
@@ -8,35 +8,22 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 export function Calendar() {
   const [currentWeek, setCurrentWeek] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
   
   const { 
-    currentGolfer, 
     signups, 
-    setSignups, 
-    addSignup, 
-    removeSignup,
-    addToOfflineQueue,
-    offlineQueue,
-    clearOfflineQueue
+    setSignups
   } = useTeeUpStore()
   
   const weeks = getCalendarDates()
   const week = weeks[currentWeek]
   
-  // Fetch signups on mount and when user changes
+  // Fetch signups on mount
   useEffect(() => {
-    if (currentGolfer) {
-      fetchSignups()
-    }
-  }, [currentGolfer])
-  
-  // Process offline queue when back online
-  useEffect(() => {
-    if (navigator.onLine && offlineQueue.length > 0) {
-      processOfflineQueue()
-    }
-  }, [offlineQueue])
+    fetchSignups()
+    // Set up polling for real-time updates
+    const interval = setInterval(fetchSignups, 5000) // Refresh every 5 seconds
+    return () => clearInterval(interval)
+  }, [])
   
   const fetchSignups = async () => {
     try {
@@ -47,128 +34,6 @@ export function Calendar() {
       }
     } catch (error) {
       console.error('Failed to fetch signups:', error)
-    }
-  }
-  
-  const processOfflineQueue = async () => {
-    for (const action of offlineQueue) {
-      if (action.type === 'add' && action.signup) {
-        await handleSignup(new Date(action.signup.date), false)
-      } else if (action.type === 'remove' && action.signupId) {
-        await handleRemoveSignup(action.signupId, false)
-      }
-    }
-    clearOfflineQueue()
-  }
-  
-  const handleToggleSignup = async (date: Date) => {
-    if (!currentGolfer) return
-    
-    const dateString = date.toISOString().split('T')[0]
-    const existingSignup = signups.find(
-      s => s.golferId === currentGolfer.id && s.date === dateString
-    )
-    
-    if (existingSignup) {
-      await handleRemoveSignup(existingSignup.id, true)
-    } else {
-      await handleSignup(date, true)
-    }
-  }
-  
-  const handleSignup = async (date: Date, updateStore: boolean = true) => {
-    if (!currentGolfer) return
-    
-    const dateString = date.toISOString().split('T')[0]
-    setIsLoading(true)
-    
-    // Optimistic update
-    const tempSignup = {
-      id: `temp-${Date.now()}`,
-      golferId: currentGolfer.id,
-      date: dateString,
-      golfer: currentGolfer
-    }
-    
-    if (updateStore) {
-      addSignup(tempSignup)
-    }
-    
-    try {
-      const response = await fetch('/api/signups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          golferId: currentGolfer.id,
-          date: dateString
-        })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to create signup')
-      }
-      
-      const newSignup = await response.json()
-      
-      // Replace temp signup with real one
-      removeSignup(tempSignup.id)
-      addSignup(newSignup)
-    } catch (error) {
-      // Revert optimistic update
-      if (updateStore) {
-        removeSignup(tempSignup.id)
-      }
-      
-      // Add to offline queue if offline
-      if (!navigator.onLine) {
-        addToOfflineQueue({
-          type: 'add',
-          signup: tempSignup
-        })
-      }
-      
-      console.error('Failed to sign up:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-  
-  const handleRemoveSignup = async (signupId: string, updateStore: boolean = true) => {
-    setIsLoading(true)
-    
-    // Store the signup for potential restoration
-    const signupToRemove = signups.find(s => s.id === signupId)
-    
-    // Optimistic update
-    if (updateStore && signupToRemove) {
-      removeSignup(signupId)
-    }
-    
-    try {
-      const response = await fetch(`/api/signups?id=${signupId}`, {
-        method: 'DELETE'
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to remove signup')
-      }
-    } catch (error) {
-      // Revert optimistic update
-      if (updateStore && signupToRemove) {
-        addSignup(signupToRemove)
-      }
-      
-      // Add to offline queue if offline
-      if (!navigator.onLine) {
-        addToOfflineQueue({
-          type: 'remove',
-          signupId
-        })
-      }
-      
-      console.error('Failed to remove signup:', error)
-    } finally {
-      setIsLoading(false)
     }
   }
   
@@ -256,27 +121,11 @@ export function Calendar() {
           <DayCard
             key={date.toISOString()}
             date={date}
-            onToggleSignup={handleToggleSignup}
           />
         ))}
       </div>
       
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-            <span className="text-sm text-gray-600">Updating...</span>
-          </div>
-        </div>
-      )}
-      
-      {/* Offline indicator */}
-      {!navigator.onLine && (
-        <div className="fixed bottom-4 left-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-lg p-3">
-          <span className="text-sm">Offline - changes will sync when connected</span>
-        </div>
-      )}
+
     </div>
   )
 } 

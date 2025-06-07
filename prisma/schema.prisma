@@ -16,11 +16,12 @@ datasource db {
 
 // Golfer model - represents a person who can sign up for tee times
 model Golfer {
-  id          String   @id @default(cuid())
-  firstName   String
-  lastInitial String   @db.VarChar(1)
-  createdAt   DateTime @default(now())
-  signups     Signup[] // One golfer can have many signups
+  id           String   @id @default(cuid())
+  firstName    String
+  lastInitial  String   @db.VarChar(1)
+  mobileNumber String?  // Optional mobile number
+  createdAt    DateTime @default(now())
+  signups      Signup[] // One golfer can have many signups
   
   // Ensure combination of firstName and lastInitial is unique
   @@unique([firstName, lastInitial])

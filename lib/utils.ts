@@ -7,9 +7,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Get the start of the current week (Sunday)
+// Get the start of the current week (Monday)
 export function getCurrentWeekStart() {
-  return startOfWeek(new Date(), { weekStartsOn: 0 }) // 0 = Sunday
+  return startOfWeek(new Date(), { weekStartsOn: 1 }) // 1 = Monday
 }
 
 // Get dates for the 4-week calendar
@@ -22,7 +22,7 @@ export function getCalendarDates() {
   // Generate 4 weeks worth of dates
   for (let week = 0; week < 4; week++) {
     const weekStart = addWeeks(currentWeekStart, week)
-    const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 })
+    const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 }) // Monday start
     
     const days = []
     for (let day = 0; day < 7; day++) {
