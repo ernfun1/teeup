@@ -41,9 +41,6 @@ export function DayCard({ date, onToggleSignup }: DayCardProps) {
           <p className="font-semibold text-gray-900">
             {formatDateDisplay(date)}
           </p>
-          <p className="text-sm text-gray-500">
-            {format(date, 'MMM d')}
-          </p>
         </div>
         <div className={`
           text-xs px-2 py-1 rounded-full

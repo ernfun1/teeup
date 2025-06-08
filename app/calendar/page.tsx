@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar } from '@/components/Calendar'
+import dynamic from 'next/dynamic'
+
+// Lazy load the Calendar component for better performance on older devices
+const Calendar = dynamic(() => import('@/components/Calendar').then(mod => ({ default: mod.Calendar })), {
+  loading: () => (
+    <div className="flex items-center justify-center p-8">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+    </div>
+  ),
+  ssr: false // Disable SSR for better client-side performance
+})
 
 export default function CalendarPage() {
   const [isClient, setIsClient] = useState(false)
@@ -34,7 +44,7 @@ export default function CalendarPage() {
             
             <Link
               href="/"
-              className="bg-gray-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow"
+              className="bg-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300"
             >
               Back to Golfers
             </Link>

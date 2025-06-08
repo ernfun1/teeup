@@ -132,14 +132,28 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    const signup = await prisma.signup.delete({
-      where: { id: signupId }
-    })
-    
-    return NextResponse.json({
-      success: true,
-      deletedId: signup.id
-    })
+    try {
+      const signup = await prisma.signup.delete({
+        where: { id: signupId }
+      })
+      
+      return NextResponse.json({
+        success: true,
+        deletedId: signup.id
+      })
+    } catch (deleteError: any) {
+      // If the record doesn't exist (P2025), return success anyway
+      // This handles the case where a user rapidly toggles a signup
+      if (deleteError.code === 'P2025') {
+        return NextResponse.json({
+          success: true,
+          deletedId: signupId,
+          message: 'Signup was already removed'
+        })
+      }
+      // Re-throw other errors
+      throw deleteError
+    }
   } catch (error) {
     console.error('Error deleting signup:', error)
     return NextResponse.json(

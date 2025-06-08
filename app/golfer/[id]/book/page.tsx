@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import { getCalendarDates, formatDateDisplay, isDateSelectable, getWeekLabel } from '@/lib/utils'
 import { format } from 'date-fns'
 
@@ -228,10 +228,38 @@ export default function BookingPage() {
     }
     setMySignups(newSignups)
     
-    // Add to pending changes
+    // Check if there's already a pending change for this date
+    const existingChangeIndex = pendingChanges.findIndex(
+      change => change.date === dateString
+    )
+    
+    if (existingChangeIndex !== -1) {
+      // If there's a pending change, we need to handle it properly
+      const existingChange = pendingChanges[existingChangeIndex]
+      
+      // If the existing change was an 'add' and now we're removing, just cancel both
+      if (existingChange.action === 'add' && wasSelected) {
+        setPendingChanges(prev => prev.filter((_, index) => index !== existingChangeIndex))
+        return
+      }
+      
+      // If the existing change was a 'remove' and now we're adding, just cancel both
+      if (existingChange.action === 'remove' && !wasSelected) {
+        setPendingChanges(prev => prev.filter((_, index) => index !== existingChangeIndex))
+        return
+      }
+    }
+    
+    // Find the signup to remove (only if it exists in the database)
     const signupToRemove = signups.find(
       s => s.golferId === golferId && s.date === dateString
     )
+    
+    // Only add a remove change if there's actually a signup to remove
+    if (wasSelected && !signupToRemove) {
+      // This was an optimistic add that hasn't been saved yet
+      return
+    }
     
     setPendingChanges(prev => [...prev, {
       date: dateString,
@@ -273,27 +301,27 @@ export default function BookingPage() {
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                Book Tee Times for {golfer.firstName} {golfer.lastInitial} <span>⛳</span>
+              <h1 className="text-xl font-bold text-gray-900">
+                {golfer.firstName} {golfer.lastInitial}
               </h1>
-              <p className="text-sm text-gray-600">Select the days you want to play</p>
+              <p className="text-sm text-gray-600 font-bold">Select the days you want to play</p>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Link
                 href="/"
-                className="bg-gray-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow"
+                className="bg-gray-200 text-black px-3 py-1.5 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
               >
-                Back
+                Golfers
               </Link>
               <Link
                 href="/calendar"
-                className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow"
+                className="bg-gray-200 text-black px-3 py-1.5 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
               >
-                This Week
+                View Week
               </Link>
             </div>
           </div>
@@ -339,26 +367,26 @@ export default function BookingPage() {
       
       {/* Week Navigation */}
       <div className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 py-2">
+          <div className="flex flex-row gap-1 justify-center items-center">
             <button
               onClick={() => navigateWeek('prev')}
               disabled={currentWeek === 0}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-gray-700 disabled:text-gray-400 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
+              aria-label="Go to previous week"
             >
-              <ChevronLeftIcon className="w-5 h-5" />
+              <span className="text-lg">←</span>
+              <span>Last Week</span>
             </button>
-            
-            <h2 className="text-lg font-semibold text-gray-900">
-              {getWeekLabel(currentWeek + 1)}
-            </h2>
             
             <button
               onClick={() => navigateWeek('next')}
               disabled={currentWeek === 3}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-gray-700 disabled:text-gray-400 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
+              aria-label="Go to next week"
             >
-              <ChevronRightIcon className="w-5 h-5" />
+              <span>Next Week</span>
+              <span className="text-lg">→</span>
             </button>
           </div>
         </div>
@@ -392,9 +420,6 @@ export default function BookingPage() {
                     <div>
                       <p className="font-semibold text-gray-900">
                         {formatDateDisplay(date)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {format(date, 'MMMM d, yyyy')}
                       </p>
                     </div>
                   </div>

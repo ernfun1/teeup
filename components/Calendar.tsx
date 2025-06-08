@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { DayCard } from './DayCard'
 import { getCalendarDates, getWeekLabel } from '@/lib/utils'
 import { useTeeUpStore } from '@/lib/store'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 export function Calendar() {
   const [currentWeek, setCurrentWeek] = useState(0)
@@ -74,40 +73,27 @@ export function Calendar() {
   
   return (
     <div className="w-full max-w-6xl mx-auto p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Navigation buttons - optimized for mobile */}
+      <div className="flex flex-row gap-1 justify-center items-center mb-6">
         <button
           onClick={() => navigateWeek('prev')}
           disabled={currentWeek === 0}
-          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-gray-700 disabled:text-gray-400 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
+          aria-label="Go to previous week"
         >
-          <ChevronLeftIcon className="w-5 h-5" />
+          <span className="text-lg">←</span>
+          <span>Last Week</span>
         </button>
-        
-        <h2 className="text-xl font-bold text-gray-900">
-          {getWeekLabel(currentWeek + 1)}
-        </h2>
         
         <button
           onClick={() => navigateWeek('next')}
           disabled={currentWeek === 3}
-          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-gray-700 disabled:text-gray-400 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
+          aria-label="Go to next week"
         >
-          <ChevronRightIcon className="w-5 h-5" />
+          <span>Next Week</span>
+          <span className="text-lg">→</span>
         </button>
-      </div>
-      
-      {/* Week indicator dots */}
-      <div className="flex justify-center gap-2 mb-6">
-        {[0, 1, 2, 3].map((weekIndex) => (
-          <button
-            key={weekIndex}
-            onClick={() => setCurrentWeek(weekIndex)}
-            className={`w-2 h-2 rounded-full transition-colors ${
-              weekIndex === currentWeek ? 'bg-green-600' : 'bg-gray-300'
-            }`}
-          />
-        ))}
       </div>
       
       {/* Calendar grid */}

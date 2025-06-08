@@ -3,7 +3,17 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
-import GolferModal from '@/components/GolferModal'
+import dynamic from 'next/dynamic'
+
+// Lazy load the GolferModal component for better performance on older devices
+const GolferModal = dynamic(() => import('@/components/GolferModal'), {
+  loading: () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+    </div>
+  ),
+  ssr: false // Disable SSR for better client-side performance
+})
 
 interface Golfer {
   id: string
@@ -79,23 +89,12 @@ export default function Home() {
               <p className="text-sm text-gray-600 mt-1">Click your name to select days to play</p>
             </div>
             
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleAddGolfer}
-                disabled={golfers.length >= 50}
-                className="flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow"
-              >
-                <PlusIcon className="w-4 h-4" />
-                <span>Add Golfer</span>
-              </button>
-              
-              <Link
-                href="/calendar"
-                className="bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow"
-              >
-                This Week
-              </Link>
-            </div>
+            <Link
+              href="/calendar"
+              className="bg-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300"
+            >
+              View Week
+            </Link>
           </div>
         </div>
       </header>
@@ -177,6 +176,18 @@ export default function Home() {
               </div>
             </>
           )}
+        </div>
+
+        {/* Add Golfer button moved to bottom */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleAddGolfer}
+            disabled={golfers.length >= 50}
+            className="flex items-center justify-center gap-2 mx-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-black text-sm transition-all duration-200 shadow-sm hover:shadow border border-gray-300"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>Add Golfer</span>
+          </button>
         </div>
       </div>
 
