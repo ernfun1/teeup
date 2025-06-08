@@ -7,17 +7,6 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "functions": {
-    "app/api/golfers/[id]/route.ts": {
-      "runtime": "edge"
-    },
-    "app/api/golfers/route.ts": {
-      "runtime": "edge"
-    },
-    "app/api/signups/route.ts": {
-      "runtime": "edge"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
