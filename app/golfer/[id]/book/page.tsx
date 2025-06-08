@@ -69,6 +69,8 @@ export default function BookingPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [isOnline, setIsOnline] = useState(true)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [tempSignupIds, setTempSignupIds] = useState<Map<string, string>>(new Map())
   
   const weeks = getCalendarDates()
   const week = weeks[currentWeek]
@@ -113,8 +115,16 @@ export default function BookingPage() {
   
   const fetchGolferAndSignups = async () => {
     try {
+      console.log('Fetching golfer and signups...')
+      
       // Fetch all golfers and find the current one
-      const golferResponse = await fetch('/api/golfers')
+      const golferResponse = await fetch('/api/golfers', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
       if (golferResponse.ok) {
         const golfers = await golferResponse.json()
         const currentGolfer = golfers.find((g: Golfer) => g.id === golferId)
@@ -124,18 +134,32 @@ export default function BookingPage() {
       }
       
       // Fetch all signups
-      const signupsResponse = await fetch('/api/signups')
+      const signupsResponse = await fetch('/api/signups', {
+        cache: 'no-store', 
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
       if (signupsResponse.ok) {
         const data = await signupsResponse.json()
+        console.log('All signups fetched:', data.length)
         setSignups(data)
         
         // Filter my signups
+        const mySignupData = data.filter((s: Signup) => s.golferId === golferId)
+        console.log('My signups:', mySignupData)
+        
         const myDates = new Set<string>(
-          data
-            .filter((s: Signup) => s.golferId === golferId)
-            .map((s: Signup) => s.date)
+          mySignupData.map((s: Signup) => s.date)
         )
-        setMySignups(myDates)
+        console.log('My booked dates:', Array.from(myDates))
+        
+        // Force clear and reset to ensure React detects the change
+        setMySignups(new Set())
+        setTimeout(() => {
+          setMySignups(myDates)
+        }, 0)
       }
     } catch (error) {
       console.error('Failed to fetch data:', error)
@@ -146,41 +170,99 @@ export default function BookingPage() {
   
   // Batch save function
   const processBatchChanges = useCallback(async (changes: PendingChange[]) => {
-    if (changes.length === 0) return
+    if (changes.length === 0 || isProcessing) return
     
+    console.log('Processing batch changes:', changes)
+    
+    setIsProcessing(true)
     setSaveStatus('saving')
     
     try {
-      // Process changes in parallel for better performance
-      const promises = changes.map(async (change) => {
+      // Deduplicate changes - keep only the latest change for each date
+      const changeMap = new Map<string, PendingChange>()
+      changes.forEach(change => {
+        changeMap.set(change.date, change)
+      })
+      const uniqueChanges = Array.from(changeMap.values())
+      
+      console.log('Unique changes to process:', uniqueChanges)
+      
+      // Process changes sequentially to avoid race conditions
+      for (const change of uniqueChanges) {
         if (change.action === 'add') {
+          console.log('Adding signup for date:', change.date)
           const response = await fetch('/api/signups', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ golferId, date: change.date })
           })
-          if (!response.ok) throw new Error('Failed to add signup')
+          if (!response.ok) {
+            const errorData = await response.json()
+            // Skip if already signed up (not an error in rapid clicking scenario)
+            if (!errorData.error?.includes('already signed up')) {
+              console.error('Failed to add signup:', errorData)
+              throw new Error(errorData.error || 'Failed to add signup')
+            }
+          } else {
+            // Store the newly created signup ID for potential future removal
+            const newSignup = await response.json()
+            setTempSignupIds(prev => new Map(prev).set(change.date, newSignup.id))
+            console.log('Created signup with ID:', newSignup.id, 'for date:', change.date)
+          }
         } else {
-          if (change.signupId) {
-            const response = await fetch(`/api/signups?id=${change.signupId}`, { 
+          // For remove action, try to use the signupId from the change,
+          // or look it up from tempSignupIds if it was just created
+          let signupIdToRemove = change.signupId
+          
+          if (!signupIdToRemove) {
+            signupIdToRemove = tempSignupIds.get(change.date)
+            console.log('Using temp signup ID:', signupIdToRemove, 'for date:', change.date)
+          }
+          
+          if (signupIdToRemove) {
+            console.log('Removing signup:', signupIdToRemove, 'for date:', change.date)
+            const response = await fetch(`/api/signups?id=${signupIdToRemove}`, { 
               method: 'DELETE' 
             })
-            if (!response.ok) throw new Error('Failed to remove signup')
+            if (!response.ok) {
+              const errorData = await response.json()
+              console.error('Failed to remove signup:', errorData)
+              throw new Error(errorData.error || 'Failed to remove signup')
+            }
+            // Clear the temp signup ID after successful removal
+            setTempSignupIds(prev => {
+              const newMap = new Map(prev)
+              newMap.delete(change.date)
+              return newMap
+            })
+          } else {
+            console.warn('No signupId for remove action on date:', change.date)
           }
         }
-      })
-      
-      await Promise.all(promises)
+      }
       
       // Clear pending changes on success
       setPendingChanges([])
       
+      // Add a small delay to ensure database operations complete
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
       // Refresh data to get updated signup counts
       await fetchGolferAndSignups()
+      
+      // Clear temp signup IDs after successful refresh
+      setTempSignupIds(new Map())
+      
       setSaveStatus('saved')
+      console.log('Batch changes processed successfully')
     } catch (error) {
       console.error('Failed to save changes:', error)
       setSaveStatus('error')
+      
+      // Show alert with detailed error message (but not for "already signed up")
+      if (error instanceof Error && !error.message.includes('already signed up')) {
+        alert(`Error: ${error.message}`)
+      }
       
       // Save to localStorage for offline retry
       if (!isOnline) {
@@ -192,21 +274,15 @@ export default function BookingPage() {
         )
       }
       
-      // Revert optimistic updates on error
-      changes.forEach(change => {
-        const newSignups = new Set(mySignups)
-        if (change.action === 'add') {
-          newSignups.delete(change.date)
-        } else {
-          newSignups.add(change.date)
-        }
-        setMySignups(newSignups)
-      })
+      // Refresh data to sync UI with database
+      await fetchGolferAndSignups()
+    } finally {
+      setIsProcessing(false)
     }
-  }, [golferId, isOnline, mySignups])
+  }, [golferId, isOnline, isProcessing, tempSignupIds])
   
   // Debounced save function
-  const debouncedSave = useDebounce(processBatchChanges, 500)
+  const debouncedSave = useDebounce(processBatchChanges, 800)
   
   // Process pending changes when they update
   useEffect(() => {
@@ -219,14 +295,8 @@ export default function BookingPage() {
     const dateString = date.toISOString().split('T')[0]
     const wasSelected = mySignups.has(dateString)
     
-    // Optimistically update UI immediately
-    const newSignups = new Set(mySignups)
-    if (wasSelected) {
-      newSignups.delete(dateString)
-    } else {
-      newSignups.add(dateString)
-    }
-    setMySignups(newSignups)
+    console.log('Toggle date:', dateString, 'Was selected:', wasSelected)
+    console.log('Current mySignups:', Array.from(mySignups))
     
     // Check if there's already a pending change for this date
     const existingChangeIndex = pendingChanges.findIndex(
@@ -236,16 +306,35 @@ export default function BookingPage() {
     if (existingChangeIndex !== -1) {
       // If there's a pending change, we need to handle it properly
       const existingChange = pendingChanges[existingChangeIndex]
+      console.log('Found existing pending change:', existingChange)
       
-      // If the existing change was an 'add' and now we're removing, just cancel both
+      // If the date was selected and we're clicking to unselect it,
+      // and there's a pending 'add' change, just cancel the add
       if (existingChange.action === 'add' && wasSelected) {
+        console.log('Canceling pending add')
+        // Remove the pending add change
         setPendingChanges(prev => prev.filter((_, index) => index !== existingChangeIndex))
+        // Revert the optimistic UI update
+        setMySignups(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(dateString)
+          return newSet
+        })
         return
       }
       
-      // If the existing change was a 'remove' and now we're adding, just cancel both
+      // If the date was not selected and we're clicking to select it,
+      // and there's a pending 'remove' change, just cancel the remove
       if (existingChange.action === 'remove' && !wasSelected) {
+        console.log('Canceling pending remove')
+        // Remove the pending remove change
         setPendingChanges(prev => prev.filter((_, index) => index !== existingChangeIndex))
+        // Revert the optimistic UI update
+        setMySignups(prev => {
+          const newSet = new Set(prev)
+          newSet.add(dateString)
+          return newSet
+        })
         return
       }
     }
@@ -255,12 +344,20 @@ export default function BookingPage() {
       s => s.golferId === golferId && s.date === dateString
     )
     
-    // Only add a remove change if there's actually a signup to remove
-    if (wasSelected && !signupToRemove) {
-      // This was an optimistic add that hasn't been saved yet
-      return
-    }
+    console.log('Creating new pending change:', wasSelected ? 'remove' : 'add', 'SignupId:', signupToRemove?.id)
     
+    // Optimistically update UI
+    setMySignups(prev => {
+      const newSet = new Set(prev)
+      if (wasSelected) {
+        newSet.delete(dateString)
+      } else {
+        newSet.add(dateString)
+      }
+      return newSet
+    })
+    
+    // Add the change to pending changes
     setPendingChanges(prev => [...prev, {
       date: dateString,
       action: wasSelected ? 'remove' : 'add',
@@ -307,7 +404,7 @@ export default function BookingPage() {
               <h1 className="text-xl font-bold text-gray-900">
                 {golfer.firstName} {golfer.lastInitial}
               </h1>
-              <p className="text-sm text-gray-600 font-bold">Select the days you want to play</p>
+              <p className="text-sm text-gray-600 font-bold">Click days to book or unbook</p>
             </div>
             
             <div className="flex items-center gap-2">
@@ -407,6 +504,11 @@ export default function BookingPage() {
                 key={dateString}
                 className={`p-4 ${selectable ? 'cursor-pointer hover:bg-gray-50' : 'opacity-60'}`}
                 onClick={() => selectable && toggleDate(date)}
+                title={
+                  !selectable ? 'Past dates cannot be modified' :
+                  isSelected ? 'Click to cancel your booking for this day' :
+                  'Click to book this day'
+                }
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -415,12 +517,15 @@ export default function BookingPage() {
                       checked={isSelected}
                       onChange={() => {}}
                       disabled={!selectable}
-                      className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+                      className="w-5 h-5 text-green-600 rounded focus:ring-green-500 pointer-events-none"
                     />
                     <div>
                       <p className="font-semibold text-gray-900">
                         {formatDateDisplay(date)}
                       </p>
+                      {isSelected && selectable && (
+                        <p className="text-xs text-green-600">You're booked for this day</p>
+                      )}
                     </div>
                   </div>
                   
@@ -444,6 +549,14 @@ export default function BookingPage() {
             <span className="text-gray-400"> • {pendingChanges.length} pending</span>
           )}
         </p>
+        
+        {/* Debug info - remove this in production */}
+        <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
+          <p className="font-bold">Debug Info:</p>
+          <p>My booked dates: {Array.from(mySignups).join(', ') || 'None'}</p>
+          <p>Pending changes: {pendingChanges.length}</p>
+          <p>Processing: {isProcessing ? 'Yes' : 'No'}</p>
+        </div>
       </div>
     </main>
   )

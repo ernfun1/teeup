@@ -101,16 +101,6 @@ export default function Home() {
             </div>
             
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setLoading(true)
-                  fetchGolfers()
-                }}
-                className="bg-gray-200 text-black px-2 py-1 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300"
-                title="Refresh golfers list"
-              >
-                ↻
-              </button>
               <Link
                 href="/calendar"
                 className="bg-gray-200 text-black px-2 py-1 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300"

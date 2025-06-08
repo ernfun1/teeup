@@ -9,7 +9,20 @@ export function cn(...inputs: ClassValue[]) {
 
 // Get the start of the current week (Monday)
 export function getCurrentWeekStart() {
-  return startOfWeek(new Date(), { weekStartsOn: 1 }) // 1 = Monday
+  const today = new Date()
+  const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
+  
+  // If today is Sunday (0), start with tomorrow (Monday)
+  // Otherwise, get the Monday of the current week
+  if (dayOfWeek === 0) {
+    // Today is Sunday, so start with tomorrow (Monday)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+    return startOfWeek(tomorrow, { weekStartsOn: 1 })
+  } else {
+    // For any other day, use the Monday of the current week
+    return startOfWeek(today, { weekStartsOn: 1 })
+  }
 }
 
 // Get dates for the 4-week calendar

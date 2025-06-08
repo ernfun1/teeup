@@ -45,9 +45,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { golferId, date } = body
     
+    console.log('Signup request received:', { golferId, date })
+    
     if (!golferId || !date) {
+      console.error('Missing required fields:', { golferId, date })
       return NextResponse.json(
         { error: 'Golfer ID and date are required' },
+        { status: 400 }
+      )
+    }
+    
+    // Parse and validate the date
+    const parsedDate = new Date(date)
+    if (isNaN(parsedDate.getTime())) {
+      console.error('Invalid date format:', date)
+      return NextResponse.json(
+        { error: 'Invalid date format' },
         { status: 400 }
       )
     }
@@ -58,6 +71,7 @@ export async function POST(request: NextRequest) {
     })
     
     if (!golfer) {
+      console.error('Golfer not found:', golferId)
       return NextResponse.json(
         { error: 'Golfer not found' },
         { status: 404 }
@@ -69,12 +83,13 @@ export async function POST(request: NextRequest) {
       where: {
         golferId_date: {
           golferId,
-          date: new Date(date)
+          date: parsedDate
         }
       }
     })
     
     if (existingSignup) {
+      console.log('Signup already exists for:', { golferId, date })
       return NextResponse.json(
         { error: 'You are already signed up for this date' },
         { status: 400 }
@@ -84,11 +99,12 @@ export async function POST(request: NextRequest) {
     // Check if date has reached capacity (8 golfers)
     const signupsForDate = await prisma.signup.count({
       where: {
-        date: new Date(date)
+        date: parsedDate
       }
     })
     
     if (signupsForDate >= 8) {
+      console.log('Date is fully booked:', date)
       return NextResponse.json(
         { error: 'This date is fully booked (8 golfers maximum)' },
         { status: 400 }
@@ -99,12 +115,14 @@ export async function POST(request: NextRequest) {
     const signup = await prisma.signup.create({
       data: {
         golferId,
-        date: new Date(date)
+        date: parsedDate
       },
       include: {
         golfer: true
       }
     })
+    
+    console.log('Signup created successfully:', signup.id)
     
     return NextResponse.json({
       ...signup,
@@ -112,8 +130,26 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error creating signup:', error)
+    console.error('Error details:', JSON.stringify(error, null, 2))
+    
+    // Check for Prisma-specific errors
+    if (error instanceof Error) {
+      if (error.message.includes('P2002')) {
+        return NextResponse.json(
+          { error: 'A signup for this date already exists' },
+          { status: 400 }
+        )
+      }
+      if (error.message.includes('P2003')) {
+        return NextResponse.json(
+          { error: 'Invalid golfer ID provided' },
+          { status: 400 }
+        )
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create signup' },
+      { error: 'Failed to create signup', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
