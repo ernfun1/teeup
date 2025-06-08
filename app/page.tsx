@@ -35,10 +35,18 @@ export default function Home() {
 
   const fetchGolfers = async () => {
     try {
-      const response = await fetch('/api/golfers')
+      // Add cache-busting to force fresh data
+      const response = await fetch('/api/golfers', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         setGolfers(data)
+      } else {
+        console.error('Failed to fetch golfers:', response.status)
       }
     } catch (error) {
       console.error('Failed to fetch golfers:', error)
@@ -72,8 +80,11 @@ export default function Home() {
     }
   }
 
-  const handleModalSave = () => {
-    fetchGolfers()
+  const handleModalSave = async () => {
+    // Add a small delay to ensure the database is updated
+    setTimeout(() => {
+      fetchGolfers()
+    }, 100)
   }
 
   return (
@@ -89,12 +100,24 @@ export default function Home() {
               <p className="text-sm text-gray-600 mt-1">Click your name to select days to play</p>
             </div>
             
-            <Link
-              href="/calendar"
-              className="bg-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300"
-            >
-              View Week
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setLoading(true)
+                  fetchGolfers()
+                }}
+                className="bg-gray-200 text-black px-2 py-1 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300"
+                title="Refresh golfers list"
+              >
+                ↻
+              </button>
+              <Link
+                href="/calendar"
+                className="bg-gray-200 text-black px-2 py-1 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300"
+              >
+                View Week
+              </Link>
+            </div>
           </div>
         </div>
       </header>

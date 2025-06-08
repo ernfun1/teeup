@@ -313,7 +313,7 @@ export default function BookingPage() {
             <div className="flex items-center gap-2">
               <Link
                 href="/"
-                className="bg-gray-200 text-black px-3 py-1.5 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
+                className="bg-gray-200 text-black px-2 py-1 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm hover:shadow border border-gray-300 text-sm"
               >
                 Golfers
               </Link>

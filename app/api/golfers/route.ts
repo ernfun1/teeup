@@ -30,7 +30,13 @@ export async function GET(request: NextRequest) {
       ]
     })
     
-    return NextResponse.json(golfers)
+    return NextResponse.json(golfers, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
   } catch (error) {
     console.error('Error fetching golfers:', error)
     return NextResponse.json(
