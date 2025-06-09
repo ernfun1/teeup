@@ -62,6 +62,13 @@ export default function BookingPage() {
   const router = useRouter()
   const golferId = params.id as string
   
+  // Debug URL params
+  console.log('URL params:', params)
+  console.log('Raw golfer ID from params:', params.id)
+  console.log('Golfer ID after casting:', golferId)
+  console.log('Golfer ID type:', typeof golferId)
+  console.log('Golfer ID length:', golferId?.length)
+  
   const [golfer, setGolfer] = useState<Golfer | null>(null)
   const [signups, setSignups] = useState<Signup[]>([])
   const [mySignups, setMySignups] = useState<Set<string>>(new Set())
@@ -373,7 +380,11 @@ export default function BookingPage() {
     
     // Find the signup to remove (only if it exists in the database)
     const signupToRemove = signups.find(
-      s => s.golferId === golferId && s.date === dateString
+      s => {
+        const normalizedSignupId = (s.golferId || '').toString().trim()
+        const normalizedGolferId = (golferId || '').toString().trim()
+        return normalizedSignupId === normalizedGolferId && s.date === dateString
+      }
     )
     
     console.log('Creating new pending change:', wasSelected ? 'remove' : 'add', 'SignupId:', signupToRemove?.id)
