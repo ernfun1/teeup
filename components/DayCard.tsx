@@ -36,23 +36,10 @@ export function DayCard({ date, onToggleSignup }: DayCardProps) {
       `}
     >
       {/* Date header */}
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <p className="font-semibold text-gray-900">
-            {formatDateDisplay(date)}
-          </p>
-        </div>
-        <div className={`
-          text-xs px-2 py-1 rounded-full
-          ${isFull 
-            ? 'bg-red-100 text-red-800' 
-            : spotsRemaining <= 3
-            ? 'bg-yellow-100 text-yellow-800'
-            : 'bg-gray-100 text-gray-600'
-          }
-        `}>
-          {isFull ? 'Full' : `${spotsRemaining} spots`}
-        </div>
+      <div className="mb-3">
+        <p className="font-semibold text-gray-900">
+          {formatDateDisplay(date)}
+        </p>
       </div>
       
       {/* Signups list */}
