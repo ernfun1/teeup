@@ -49,4 +49,8 @@ git reset --hard v1.1-calendar-fixed
   - Changed title from "TeeUp Calendar" to "Calendar" ✅
   - Removed spot counter elements for cleaner view ✅
   - Fixed navigation issue by restarting dev server ✅
-  - All changes tested and working! 
+  - All changes tested and working!
+- **Removed refresh button** (Dec 13, 2024)
+  - Removed manual refresh button from Calendar navigation ✅
+  - Automatic refresh (every 5 seconds) still active ✅
+  - Cleaner UI with just Last Week/Next Week buttons 
