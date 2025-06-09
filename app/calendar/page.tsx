@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { useTeeUpStore } from '@/lib/store'
 
 // Lazy load the Calendar component for better performance on older devices
 const Calendar = dynamic(() => import('@/components/Calendar').then(mod => ({ default: mod.Calendar })), {
@@ -16,10 +17,13 @@ const Calendar = dynamic(() => import('@/components/Calendar').then(mod => ({ de
 
 export default function CalendarPage() {
   const [isClient, setIsClient] = useState(false)
+  const { setSignups } = useTeeUpStore()
   
   useEffect(() => {
     setIsClient(true)
-  }, [])
+    // Clear any stale data when the page loads
+    setSignups([])
+  }, [setSignups])
   
   if (!isClient) {
     return (

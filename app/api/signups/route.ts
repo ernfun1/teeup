@@ -88,9 +88,11 @@ export async function GET(request: NextRequest) {
     // Add response headers to ensure fresh data
     return NextResponse.json(transformedSignups, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate, max-age=0',
         'Pragma': 'no-cache',
-        'Expires': '0'
+        'Expires': '0',
+        'X-Content-Type-Options': 'nosniff',
+        'Vary': 'Accept-Encoding'
       }
     })
   } catch (error) {
@@ -234,6 +236,14 @@ export async function POST(request: NextRequest) {
         date: dateToString(signup.date)
       },
       allSignups: transformedSignups
+    }, {
+      headers: {
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Content-Type-Options': 'nosniff',
+        'Vary': 'Accept-Encoding'
+      }
     })
   } catch (error) {
     console.error('Error creating signup:', error)

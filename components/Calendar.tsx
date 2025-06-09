@@ -7,6 +7,8 @@ import { useTeeUpStore } from '@/lib/store'
 
 export function Calendar() {
   const [currentWeek, setCurrentWeek] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   const { 
     signups, 
@@ -26,13 +28,29 @@ export function Calendar() {
   
   const fetchSignups = async () => {
     try {
-      const response = await fetch('/api/signups')
+      setError(null)
+      // Add timestamp to prevent caching
+      const response = await fetch(`/api/signups?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
       if (response.ok) {
         const data = await response.json()
+        console.log('Calendar: Fetched', data.length, 'signups')
         setSignups(data)
+      } else {
+        console.error('Calendar: Failed to fetch signups, status:', response.status)
+        setError(`Failed to load signups (status: ${response.status})`)
       }
     } catch (error) {
-      console.error('Failed to fetch signups:', error)
+      console.error('Calendar: Failed to fetch signups:', error)
+      setError('Failed to connect to server')
+    } finally {
+      setIsLoading(false)
     }
   }
   
@@ -94,6 +112,19 @@ export function Calendar() {
           <span>Next Week</span>
           <span className="text-lg">→</span>
         </button>
+        
+        {/* Refresh button for mobile */}
+        <button
+          onClick={() => {
+            console.log('Manual refresh triggered')
+            fetchSignups()
+          }}
+          className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg font-medium text-blue-700 transition-all duration-200 shadow-sm hover:shadow border border-blue-300 text-sm ml-2"
+          aria-label="Refresh signups"
+          title="Refresh signups"
+        >
+          <span>↻</span>
+        </button>
       </div>
       
       {/* Calendar grid */}
@@ -111,6 +142,12 @@ export function Calendar() {
         ))}
       </div>
       
+      {/* Debug info for mobile */}
+      <div className="mt-4 text-center text-xs text-gray-500">
+        <p>Total signups loaded: {signups.length}</p>
+        {isLoading && <p className="text-blue-600">Loading signups...</p>}
+        {error && <p className="text-red-600">{error}</p>}
+      </div>
 
     </div>
   )
