@@ -142,7 +142,7 @@ export default function BookingPage() {
       }
       
       // Fetch all signups
-      const signupsResponse = await fetch('/api/signups', {
+      const signupsResponse = await fetch(`/api/signups?t=${Date.now()}`, {
         cache: 'no-store', 
         headers: {
           'Cache-Control': 'no-cache',
@@ -243,10 +243,33 @@ export default function BookingPage() {
               throw new Error(errorData.error || 'Failed to add signup')
             }
           } else {
+            // Get the response with all signups
+            const responseData = await response.json()
+            console.log('Created signup with ID:', responseData.newSignup?.id || 'unknown', 'for date:', change.date)
+            
+            // If we got all signups in the response, update them directly
+            if (responseData.allSignups) {
+              console.log('Updating signups from POST response:', responseData.allSignups.length)
+              setSignups(responseData.allSignups)
+              
+              // Update mySignups based on the fresh data
+              const mySignupData = responseData.allSignups.filter((s: Signup) => {
+                const normalizedSignupId = (s.golferId || '').toString().trim()
+                const normalizedGolferId = (golferId || '').toString().trim()
+                return normalizedSignupId === normalizedGolferId
+              })
+              
+              const myDates = new Set<string>(
+                mySignupData.map((s: Signup) => s.date)
+              )
+              
+              setMySignups(myDates)
+            }
+            
             // Store the newly created signup ID for potential future removal
-            const newSignup = await response.json()
-            setTempSignupIds(prev => new Map(prev).set(change.date, newSignup.id))
-            console.log('Created signup with ID:', newSignup.id, 'for date:', change.date)
+            if (responseData.newSignup?.id) {
+              setTempSignupIds(prev => new Map(prev).set(change.date, responseData.newSignup.id))
+            }
           }
         } else {
           // For remove action, try to use the signupId from the change,
@@ -283,11 +306,18 @@ export default function BookingPage() {
       // Clear pending changes on success
       setPendingChanges([])
       
-      // Add a small delay to ensure database operations complete
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // Only refresh if we didn't get updated data from the POST responses
+      const needsRefresh = uniqueChanges.some(change => change.action === 'remove')
       
-      // Refresh data to get updated signup counts
-      await fetchGolferAndSignups()
+      if (needsRefresh) {
+        // Add a longer delay to ensure database operations complete
+        console.log('Waiting for database to commit changes...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Refresh data to get updated signup counts
+        console.log('Refreshing data after delay...')
+        await fetchGolferAndSignups()
+      }
       
       // Clear temp signup IDs after successful refresh
       setTempSignupIds(new Map())

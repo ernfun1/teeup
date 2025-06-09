@@ -6,6 +6,8 @@ import { dateToString, stringToDate, getTodayUTC } from '@/lib/date-utils'
 // GET /api/signups - Get signups for the 4-week period
 export async function GET(request: NextRequest) {
   try {
+    console.log('=== GET /api/signups called at', new Date().toISOString(), '===')
+    
     const today = getTodayUTC()
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 }) // Monday
     const fourWeeksEnd = endOfWeek(addWeeks(currentWeekStart, 3), { weekStartsOn: 1 })
@@ -19,9 +21,19 @@ export async function GET(request: NextRequest) {
     const allSignups = await prisma.signup.findMany({
       include: {
         golfer: true
+      },
+      orderBy: {
+        date: 'asc'
       }
     })
     console.log('Total signups in database:', allSignups.length)
+    
+    // Log all signup IDs and dates for debugging
+    console.log('All signup IDs and dates:')
+    allSignups.forEach(s => {
+      console.log(`  - ID: ${s.id}, Date: ${dateToString(s.date)}, GolferId: ${s.golferId}`)
+    })
+    
     if (allSignups.length > 0) {
       console.log('First signup date:', dateToString(allSignups[0].date))
     }
@@ -180,10 +192,48 @@ export async function POST(request: NextRequest) {
     
     console.log('Signup created successfully:', signup.id)
     console.log('Created signup date:', dateToString(signup.date))
+    console.log('Created at timestamp:', new Date().toISOString())
+    
+    // Verify the signup was actually created
+    const verifySignup = await prisma.signup.findUnique({
+      where: { id: signup.id },
+      include: { golfer: true }
+    })
+    
+    console.log('Verification - signup exists:', !!verifySignup)
+    
+    // Return all signups to avoid consistency issues with connection pooling
+    const updatedSignups = await prisma.signup.findMany({
+      include: {
+        golfer: true
+      },
+      orderBy: {
+        date: 'asc'
+      }
+    })
+    
+    console.log('Returning updated signups count:', updatedSignups.length)
+    
+    const transformedSignups = updatedSignups.map((s) => ({
+      id: s.id,
+      golferId: s.golferId,
+      date: dateToString(s.date),
+      createdAt: s.createdAt,
+      golfer: s.golfer ? {
+        id: s.golfer.id,
+        firstName: s.golfer.firstName,
+        lastInitial: s.golfer.lastInitial,
+        mobileNumber: s.golfer.mobileNumber
+      } : null
+    }))
     
     return NextResponse.json({
-      ...signup,
-      date: dateToString(signup.date)
+      success: true,
+      newSignup: {
+        ...signup,
+        date: dateToString(signup.date)
+      },
+      allSignups: transformedSignups
     })
   } catch (error) {
     console.error('Error creating signup:', error)
