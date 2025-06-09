@@ -5,8 +5,25 @@ import { startOfWeek, endOfWeek, addWeeks } from 'date-fns'
 // GET /api/signups - Get signups for the 4-week period
 export async function GET(request: NextRequest) {
   try {
-    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday
+    const now = new Date()
+    const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 }) // Monday
     const fourWeeksEnd = endOfWeek(addWeeks(currentWeekStart, 3), { weekStartsOn: 1 })
+    
+    console.log('GET /api/signups - Date filter debug:')
+    console.log('Current time:', now.toISOString())
+    console.log('Week start:', currentWeekStart.toISOString())
+    console.log('Four weeks end:', fourWeeksEnd.toISOString())
+    
+    // First, let's check if there are ANY signups in the database
+    const allSignups = await prisma.signup.findMany({
+      include: {
+        golfer: true
+      }
+    })
+    console.log('Total signups in database:', allSignups.length)
+    if (allSignups.length > 0) {
+      console.log('First signup date:', allSignups[0].date.toISOString())
+    }
     
     const signups = await prisma.signup.findMany({
       where: {
@@ -23,8 +40,12 @@ export async function GET(request: NextRequest) {
       }
     })
     
+    // TEMPORARY: Return ALL signups to debug the issue
+    console.log('Filtered signups:', signups.length)
+    console.log('Using ALL signups for debugging')
+    
     // Transform dates to ISO strings for consistency
-    const transformedSignups = signups.map((signup) => ({
+    const transformedSignups = allSignups.map((signup) => ({
       ...signup,
       date: signup.date.toISOString().split('T')[0]
     }))
@@ -57,6 +78,11 @@ export async function POST(request: NextRequest) {
     
     // Parse and validate the date
     const parsedDate = new Date(date)
+    console.log('Date parsing debug:')
+    console.log('Input date string:', date)
+    console.log('Parsed date:', parsedDate.toISOString())
+    console.log('Parsed date (local):', parsedDate.toString())
+    
     if (isNaN(parsedDate.getTime())) {
       console.error('Invalid date format:', date)
       return NextResponse.json(
