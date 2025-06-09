@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { startOfWeek, endOfWeek, addWeeks } from 'date-fns'
+import { dateToString, stringToDate, getTodayUTC } from '@/lib/date-utils'
 
 // GET /api/signups - Get signups for the 4-week period
 export async function GET(request: NextRequest) {
   try {
-    const now = new Date()
-    const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 }) // Monday
+    const today = getTodayUTC()
+    const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 }) // Monday
     const fourWeeksEnd = endOfWeek(addWeeks(currentWeekStart, 3), { weekStartsOn: 1 })
     
     console.log('GET /api/signups - Date filter debug:')
-    console.log('Current time:', now.toISOString())
-    console.log('Week start:', currentWeekStart.toISOString())
-    console.log('Four weeks end:', fourWeeksEnd.toISOString())
+    console.log('Today (UTC):', dateToString(today))
+    console.log('Week start:', dateToString(currentWeekStart))
+    console.log('Four weeks end:', dateToString(fourWeeksEnd))
     
     // First, let's check if there are ANY signups in the database
     const allSignups = await prisma.signup.findMany({
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     })
     console.log('Total signups in database:', allSignups.length)
     if (allSignups.length > 0) {
-      console.log('First signup date:', allSignups[0].date.toISOString())
+      console.log('First signup date:', dateToString(allSignups[0].date))
     }
     
     const signups = await prisma.signup.findMany({
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Transform dates to ISO strings for consistency
     const transformedSignups = allSignups.map((signup) => ({
       ...signup,
-      date: signup.date.toISOString().split('T')[0]
+      date: dateToString(signup.date)
     }))
     
     return NextResponse.json(transformedSignups)
@@ -76,12 +77,12 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Parse and validate the date
-    const parsedDate = new Date(date)
+    // Parse the date string to a proper UTC date
+    const parsedDate = stringToDate(date)
     console.log('Date parsing debug:')
     console.log('Input date string:', date)
-    console.log('Parsed date:', parsedDate.toISOString())
-    console.log('Parsed date (local):', parsedDate.toString())
+    console.log('Parsed date (UTC):', parsedDate.toISOString())
+    console.log('Date string:', dateToString(parsedDate))
     
     if (isNaN(parsedDate.getTime())) {
       console.error('Invalid date format:', date)
@@ -149,10 +150,11 @@ export async function POST(request: NextRequest) {
     })
     
     console.log('Signup created successfully:', signup.id)
+    console.log('Created signup date:', dateToString(signup.date))
     
     return NextResponse.json({
       ...signup,
-      date: signup.date.toISOString().split('T')[0]
+      date: dateToString(signup.date)
     })
   } catch (error) {
     console.error('Error creating signup:', error)

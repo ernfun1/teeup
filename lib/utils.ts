@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { startOfWeek, endOfWeek, addWeeks, format, isToday, isPast, startOfDay } from 'date-fns'
+import { getTodayUTC, createDateUTC, isSameDay } from './date-utils'
 
 // Utility function to merge Tailwind CSS classes
 export function cn(...inputs: ClassValue[]) {
@@ -9,15 +10,15 @@ export function cn(...inputs: ClassValue[]) {
 
 // Get the start of the current week (Monday)
 export function getCurrentWeekStart() {
-  const today = new Date()
-  const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
+  const today = getTodayUTC()
+  const dayOfWeek = today.getUTCDay() // 0 = Sunday, 1 = Monday, etc.
   
   // If today is Sunday (0), start with tomorrow (Monday)
   // Otherwise, get the Monday of the current week
   if (dayOfWeek === 0) {
     // Today is Sunday, so start with tomorrow (Monday)
     const tomorrow = new Date(today)
-    tomorrow.setDate(today.getDate() + 1)
+    tomorrow.setUTCDate(today.getUTCDate() + 1)
     return startOfWeek(tomorrow, { weekStartsOn: 1 })
   } else {
     // For any other day, use the Monday of the current week
@@ -27,7 +28,7 @@ export function getCurrentWeekStart() {
 
 // Get dates for the 4-week calendar
 export function getCalendarDates() {
-  const today = startOfDay(new Date())
+  const today = getTodayUTC()
   const currentWeekStart = getCurrentWeekStart()
   
   const weeks = []
@@ -40,7 +41,7 @@ export function getCalendarDates() {
     const days = []
     for (let day = 0; day < 7; day++) {
       const date = new Date(weekStart)
-      date.setDate(date.getDate() + day)
+      date.setUTCDate(date.getUTCDate() + day)
       days.push(date)
     }
     
@@ -62,12 +63,14 @@ export function formatGolferName(firstName: string, lastInitial: string) {
 
 // Check if a date is selectable (not in the past)
 export function isDateSelectable(date: Date) {
-  return !isPast(startOfDay(date)) || isToday(date)
+  const today = getTodayUTC()
+  return date >= today
 }
 
 // Format date for display
 export function formatDateDisplay(date: Date) {
-  if (isToday(date)) {
+  const today = getTodayUTC()
+  if (isSameDay(date, today)) {
     return 'Today'
   }
   return format(date, 'EEE, MMM d')

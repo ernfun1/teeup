@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { dateToString } from './date-utils'
 
 // Types for our store
 export interface Golfer {
@@ -102,7 +103,7 @@ export function useMySignups() {
 // Helper hook to get signups for a specific date
 export function useSignupsForDate(date: Date) {
   const { signups } = useTeeUpStore()
-  const dateString = date.toISOString().split('T')[0]
+  const dateString = dateToString(date)
   
   return signups.filter(signup => signup.date === dateString)
 } 

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import { getCalendarDates, formatDateDisplay, isDateSelectable, getWeekLabel } from '@/lib/utils'
 import { format } from 'date-fns'
+import { dateToString } from '@/lib/date-utils'
 
 interface Golfer {
   id: string
@@ -292,7 +293,7 @@ export default function BookingPage() {
   }, [pendingChanges, debouncedSave, isOnline])
   
   const toggleDate = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0]
+    const dateString = dateToString(date)
     const wasSelected = mySignups.has(dateString)
     
     console.log('Toggle date:', dateString, 'Was selected:', wasSelected)
@@ -366,7 +367,7 @@ export default function BookingPage() {
   }
   
   const getSignupsForDate = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0]
+    const dateString = dateToString(date)
     return signups.filter(s => s.date === dateString).length
   }
   
@@ -493,7 +494,7 @@ export default function BookingPage() {
       <div className="max-w-4xl mx-auto p-4">
         <div className="bg-white rounded-lg shadow-sm divide-y">
           {week.days.map((date) => {
-            const dateString = date.toISOString().split('T')[0]
+            const dateString = dateToString(date)
             const isSelected = mySignups.has(dateString)
             const signupCount = getSignupsForDate(date)
             const isFull = signupCount >= 8
