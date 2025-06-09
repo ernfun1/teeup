@@ -41,7 +41,7 @@ export default function CalendarPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-green-700 flex items-center gap-2">
-                TeeUp Calendar <span>⛳</span>
+                Calendar <span>⛳</span>
               </h1>
               <p className="text-sm text-gray-600 mt-1">See who's playing this week</p>
             </div>
