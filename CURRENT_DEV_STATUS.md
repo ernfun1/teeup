@@ -44,4 +44,9 @@ git reset --hard v1.1-calendar-fixed
 ```
 
 ## 📝 Development Log
-- **Created safe-dev-setup branch** - Ready for development 
+- **Created safe-dev-setup branch** - Ready for development
+- **Updated Calendar page** (Dec 13, 2024)
+  - Changed title from "TeeUp Calendar" to "Calendar" ✅
+  - Removed spot counter elements for cleaner view ✅
+  - Fixed navigation issue by restarting dev server ✅
+  - All changes tested and working! 
