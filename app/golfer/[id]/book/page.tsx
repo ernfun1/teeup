@@ -145,10 +145,32 @@ export default function BookingPage() {
       if (signupsResponse.ok) {
         const data = await signupsResponse.json()
         console.log('All signups fetched:', data.length)
+        
+        // Add detailed debugging
+        console.log('Current golferId:', golferId)
+        console.log('GolferId type:', typeof golferId)
+        
+        if (data.length > 0) {
+          console.log('Sample signup:', {
+            id: data[0].id,
+            golferId: data[0].golferId,
+            golferIdType: typeof data[0].golferId,
+            date: data[0].date,
+            golferName: data[0].golfer?.firstName
+          })
+          console.log('GolferId match test:', data[0].golferId === golferId)
+        }
+        
         setSignups(data)
         
-        // Filter my signups
-        const mySignupData = data.filter((s: Signup) => s.golferId === golferId)
+        // Filter my signups with debugging
+        const mySignupData = data.filter((s: Signup) => {
+          const matches = s.golferId === golferId
+          if (!matches && data.length < 10) { // Only log for small datasets
+            console.log(`Signup ${s.id}: golferId "${s.golferId}" !== "${golferId}"`)
+          }
+          return matches
+        })
         console.log('My signups:', mySignupData)
         
         const myDates = new Set<string>(

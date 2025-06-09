@@ -45,11 +45,31 @@ export async function GET(request: NextRequest) {
     console.log('Filtered signups:', signups.length)
     console.log('Using ALL signups for debugging')
     
+    // Log sample data to debug
+    if (allSignups.length > 0) {
+      console.log('Sample signup data:', {
+        id: allSignups[0].id,
+        golferId: allSignups[0].golferId,
+        date: allSignups[0].date,
+        golferFirstName: allSignups[0].golfer?.firstName
+      })
+    }
+    
     // Transform dates to ISO strings for consistency
     const transformedSignups = allSignups.map((signup) => ({
-      ...signup,
-      date: dateToString(signup.date)
+      id: signup.id,
+      golferId: signup.golferId,
+      date: dateToString(signup.date),
+      createdAt: signup.createdAt,
+      golfer: signup.golfer ? {
+        id: signup.golfer.id,
+        firstName: signup.golfer.firstName,
+        lastInitial: signup.golfer.lastInitial,
+        mobileNumber: signup.golfer.mobileNumber
+      } : null
     }))
+    
+    console.log('Returning', transformedSignups.length, 'signups')
     
     return NextResponse.json(transformedSignups)
   } catch (error) {
