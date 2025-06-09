@@ -112,19 +112,6 @@ export function Calendar() {
           <span>Next Week</span>
           <span className="text-lg">→</span>
         </button>
-        
-        {/* Refresh button for mobile */}
-        <button
-          onClick={() => {
-            console.log('Manual refresh triggered')
-            fetchSignups()
-          }}
-          className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg font-medium text-blue-700 transition-all duration-200 shadow-sm hover:shadow border border-blue-300 text-sm ml-2"
-          aria-label="Refresh signups"
-          title="Refresh signups"
-        >
-          <span>↻</span>
-        </button>
       </div>
       
       {/* Calendar grid */}
