@@ -41,21 +41,23 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    // TEMPORARY: Return ALL signups to debug the issue
-    console.log('Filtered signups:', signups.length)
-    console.log('Using ALL signups for debugging')
+    // TEMPORARY: Return ALL signups to debug the filtering issue
+    console.log('Filtered signups for 4-week period:', signups.length)
+    console.log('Total signups in DB:', allSignups.length)
+    console.log('DEBUGGING: Returning ALL signups to diagnose filtering issue')
     
     // Log sample data to debug
     if (allSignups.length > 0) {
       console.log('Sample signup data:', {
         id: allSignups[0].id,
         golferId: allSignups[0].golferId,
+        golferIdLength: allSignups[0].golferId.length,
         date: allSignups[0].date,
         golferFirstName: allSignups[0].golfer?.firstName
       })
     }
     
-    // Transform dates to ISO strings for consistency
+    // Transform dates to ISO strings for consistency and ensure all fields are included
     const transformedSignups = allSignups.map((signup) => ({
       id: signup.id,
       golferId: signup.golferId,
@@ -69,9 +71,16 @@ export async function GET(request: NextRequest) {
       } : null
     }))
     
-    console.log('Returning', transformedSignups.length, 'signups')
+    console.log('Returning', transformedSignups.length, 'total signups (all dates)')
     
-    return NextResponse.json(transformedSignups)
+    // Add response headers to ensure fresh data
+    return NextResponse.json(transformedSignups, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
   } catch (error) {
     console.error('Error fetching signups:', error)
     return NextResponse.json(

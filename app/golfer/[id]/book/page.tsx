@@ -165,9 +165,18 @@ export default function BookingPage() {
         
         // Filter my signups with debugging
         const mySignupData = data.filter((s: Signup) => {
-          const matches = s.golferId === golferId
+          // Trim and normalize both IDs for comparison
+          const normalizedSignupId = (s.golferId || '').toString().trim()
+          const normalizedGolferId = (golferId || '').toString().trim()
+          
+          const matches = normalizedSignupId === normalizedGolferId
+          
           if (!matches && data.length < 10) { // Only log for small datasets
-            console.log(`Signup ${s.id}: golferId "${s.golferId}" !== "${golferId}"`)
+            console.log(`Signup ${s.id}:`)
+            console.log(`  - Original golferId: "${s.golferId}" (length: ${s.golferId?.length})`)
+            console.log(`  - Normalized: "${normalizedSignupId}"`)
+            console.log(`  - Expected: "${normalizedGolferId}" (length: ${normalizedGolferId.length})`)
+            console.log(`  - Match: ${matches}`)
           }
           return matches
         })
